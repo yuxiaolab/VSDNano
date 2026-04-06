@@ -197,6 +197,7 @@ public:
             ell->SetLineWidth(2);
             ell->SetBaseVectors(v[0], v[1], v[2]);
             ell->Outline();
+            ell->SetMainTransparency(90);
             SetupAddElement(ell, iItemHolder);
 
             // add TGeoSphere
@@ -204,7 +205,7 @@ public:
             {
                auto sph = new REveGeoShape("Sphere");
                sph->SetShape(new TGeoSphere(0.98f, 1.0f));
-               sph->SetMainTransparency(80);
+               sph->SetMainTransparency(95);
                sph->SetMainColor(iItemHolder->GetMainColor());
                sph->SetNSegments(80);
 
