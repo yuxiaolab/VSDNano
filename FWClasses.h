@@ -25,6 +25,7 @@
 #include <ROOT/REveDataCollection.hxx>
 #include <ROOT/REveSelection.hxx>
 #include <ROOT/REveManager.hxx>
+#include <ROOT/REveGeoShapeExtract.hxx>
 
 // #include "TTree.h"
 #include "TGeoTube.h"
@@ -36,6 +37,7 @@
 #include "TMath.h"
 #include "TClass.h"
 #include "TGeoBBox.h"
+#include "TKey.h"
 #include "TEnv.h"
 using namespace ROOT::Experimental;
 
@@ -519,6 +521,69 @@ public:
    }
 };
 
+REveGeoShape* getExtract(const char* extract_name)
+{
+   const char *file = "data/cms_extract.root";
+   auto f = TFile::Open(file);
+
+   TIter next(f->GetListOfKeys());
+   TKey *key = nullptr;
+
+   while ((key = (TKey *)next())) {
+
+      std::cout << "class name = " << key->GetClassName() << "\n";
+
+      TClass *cl = TClass::GetClass(key->GetClassName());
+
+      if (!cl)
+         continue;
+
+      if (cl->InheritsFrom("ROOT::Experimental::REveGeoShapeExtract")) {
+
+         std::cout << "Found extract: " << key->GetName() << "\n";
+         if (std::strcmp(key->GetName(), extract_name) == 0)
+         {
+             auto gse =
+                 dynamic_cast<REveGeoShapeExtract *>(key->ReadObj());
+
+             auto gs =
+                 REveGeoShape::ImportShapeExtract(gse, 0);
+             return gs;
+         }
+      }
+   }
+
+   return nullptr;
+}
+
+
+void doFishEyeDistortion(REveProjectionManager* projMgr)
+{
+    float caloDistortion = 1.0;
+    float muonDistortion = 0.5;
+    if (projMgr->GetProjection()->GetType() == REveProjection::kPT_RPhi)
+    {
+        projMgr->GetProjection()->ChangePreScaleEntry(0, 1, caloDistortion);
+        projMgr->GetProjection()->ChangePreScaleEntry(0, 2, muonDistortion);
+    }
+    else
+    {
+        projMgr->GetProjection()->ChangePreScaleEntry(0, 1, caloDistortion);
+        projMgr->GetProjection()->ChangePreScaleEntry(0, 2, muonDistortion);
+        projMgr->GetProjection()->ChangePreScaleEntry(1, 1, caloDistortion);
+        projMgr->GetProjection()->ChangePreScaleEntry(1, 2, muonDistortion);
+    }
+    projMgr->UpdateName();
+
+    // static const float s_distortF = 0.001;
+      REveProjection* p = projMgr->GetProjection();
+    p->SetDistortion(0.02);
+    p->SetFixR(310);
+
+    // force an update
+    projMgr->ProjectChildren();
+}
+
 //==============================================================================
 //== init scenes and views  =============================================================
 //==============================================================================
@@ -572,6 +637,7 @@ void createScenesAndViews()
 
    viewContext->SetTableViewInfo(tableInfo);
 
+     
 
     auto baseHist = new TH2F("dummy", "dummy", fw3dlego::xbins_n - 1, fw3dlego::xbins, 72, -TMath::Pi(), TMath::Pi());
     caloData = new REveCaloDataHist();
@@ -590,28 +656,34 @@ void createScenesAndViews()
    auto b1 = new REveGeoShape("Barrel 1");
    b1->SetShape(new TGeoTube(r -2 , r+2, z));
    b1->SetMainColor(kCyan);
-   // eveMng->GetGlobalScene()->AddElement(b1);
 
+   REveGeoShape* gse = getExtract("VSDGeo3D");
+   std::cout << "Exreact " << gse << "\n"; 
+   eveMng->GetGlobalScene()->AddElement(gse);
    // Projected RPhi
    if (1)
    {
-      auto rPhiEventScene = eveMng->SpawnNewScene("RPhi Scene", "RPhiProjected");
-      mngRPhi = new REveProjectionManager(REveProjection::kPT_RPhi);
+       auto rPhiEventScene = eveMng->SpawnNewScene("RPhi Scene", "RPhiProjected");
+       mngRPhi = new REveProjectionManager(REveProjection::kPT_RPhi);
 
-      mngRPhi->GetProjection()->AddPreScaleEntry(0, r - 2, 1.0);
-      mngRPhi->GetProjection()->AddPreScaleEntry(0, 300, 0.6);
+       // distortion
+       mngRPhi->GetProjection()->AddPreScaleEntry(0, r - 2, 1.0);
+       mngRPhi->GetProjection()->AddPreScaleEntry(0, 300, 0.6);
 
-      mngRPhi->SetImportEmpty(true);
-      auto rPhiView = eveMng->SpawnNewViewer("RPhi View");
-      rPhiView->SetCameraType(REveViewer::kCameraOrthoXOY);
-      rPhiView->AddScene(rPhiEventScene);
+       mngRPhi->SetImportEmpty(true);
+       auto rPhiView = eveMng->SpawnNewViewer("RPhi View");
+       rPhiView->SetCameraType(REveViewer::kCameraOrthoXOY);
+       rPhiView->AddScene(rPhiEventScene);
 
-      auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry");
+       auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry RPhi");
        mngRPhi->SetCurrentDepth(-4);
-      mngRPhi->ImportElements(b1,pgeoScene );
-      rPhiView->AddScene(pgeoScene);
+       mngRPhi->ImportElements(b1, pgeoScene);
+
+       REveGeoShape *gseProj = getExtract("VSDGeoProj");
+       mngRPhi->ImportElements(gseProj, pgeoScene);
+       rPhiView->AddScene(pgeoScene);
        mngRPhi->SetCurrentDepth(-1);
-      mngRPhi->ImportElements(calo3d, rPhiEventScene);
+       mngRPhi->ImportElements(calo3d, rPhiEventScene);
        mngRPhi->SetCurrentDepth(0);
    }
    // Projected RhoZ
@@ -620,6 +692,7 @@ void createScenesAndViews()
        auto rhoZEventScene = eveMng->SpawnNewScene("RhoZ Scene", "RhoZProjected");
        mngRhoZ = new REveProjectionManager(REveProjection::kPT_RhoZ);
 
+       // distortion
        mngRhoZ->GetProjection()->AddPreScaleEntry(0, r - 2, 1.0);
        mngRhoZ->GetProjection()->AddPreScaleEntry(1, 310, 1.0);
        mngRhoZ->GetProjection()->AddPreScaleEntry(0, 370, 0.6);
@@ -630,9 +703,12 @@ void createScenesAndViews()
        rhoZView->SetCameraType(REveViewer::kCameraOrthoXOY);
        rhoZView->AddScene(rhoZEventScene);
 
-       auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry");
+       auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry RhoZ");
        mngRhoZ->SetCurrentDepth(-4);
        mngRhoZ->ImportElements(b1, pgeoScene);
+
+       REveGeoShape *gseRhoZ = getExtract("VSDGeo");
+       mngRhoZ->ImportElements(gseRhoZ, pgeoScene);
        rhoZView->AddScene(pgeoScene);
        mngRhoZ->SetCurrentDepth(-1);
        mngRhoZ->ImportElements(calo3d, rhoZEventScene);
