@@ -119,7 +119,58 @@ void addRhoZEnergyProjection(REveDataProxyBuilderBase *pb, REveElement *containe
       t(3, 4) = (z2 + z1) / 2;
       pb->SetupAddElement(element, container);
    }
-}
+};
+
+//====================================================================================
+
+class HitProxyBuilder : public REveDataSimpleProxyBuilderTemplate<VsdHit>
+{
+public:
+   using REveDataSimpleProxyBuilderTemplate<VsdHit>::BuildItem;
+   virtual void BuildItem(const VsdHit &iData, int iIndex, REveElement *iItemHolder, const REveViewContext *vc) override
+   {
+      auto ps = new REvePointSet("Hit Point");
+      // Set point at x, y, z defined in VsdHit
+      ps->SetNextPoint(iData.x(), iData.y(), iData.z());
+      
+      // Visual styling
+      ps->SetMarkerStyle(4); 
+      ps->SetMarkerSize(4);
+      ps->SetMainColor(Collection()->GetMainColor());
+      
+      SetupAddElement(ps, iItemHolder);
+   }
+};
+
+//====================================================================================
+
+class SegmentProxyBuilder : public REveDataSimpleProxyBuilderTemplate<VsdSegment>
+{
+public:
+   using REveDataSimpleProxyBuilderTemplate<VsdSegment>::BuildItem;
+   virtual void BuildItem(const VsdSegment &iData, int iIndex, REveElement *iItemHolder, const REveViewContext *vc) override
+   {
+      auto ls = new REveStraightLineSet("Segment Line");
+      
+      // start point (x, y, z)
+      float x0 = iData.posX();
+      float y0 = iData.posY();
+      float z0 = iData.posZ();
+      
+      // end point: we project the slopes tx and ty over a small delta-Z 
+      // Adjust 'length' based on your detector geometry (e.g., 5.0 cm)
+      float length = 5.0f; 
+      float x1 = x0 + iData.tx() * length;
+      float y1 = y0 + iData.ty() * length;
+      float z1 = z0 + length;
+
+      ls->AddLine(x0, y0, z0, x1, y1, z1);
+      ls->SetLineWidth(2);
+      ls->SetMainColor(Collection()->GetMainColor());
+      
+      SetupAddElement(ls, iItemHolder);
+   }
+};
 
 //====================================================================================
 

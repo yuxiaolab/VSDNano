@@ -237,8 +237,12 @@ public:
             return new METProxyBuilder();
         else if (vsdc->m_purpose == "Muon")
             return new MuonProxyBuilder();
+        else if (vsdc->m_purpose == "Segment")
+            return new SegmentProxyBuilder();
         else if (vsdc->m_purpose == "Vertex")
-            return new VertexProxyBuilder();
+            return new VertexProxyBuilder(); 
+        else if (vsdc->m_purpose == "Hit")
+            return new HitProxyBuilder();
         else if (vsdc->m_purpose == "CaloTower")
             return new CaloTowerProxyBuilder(caloData);
 
@@ -534,8 +538,6 @@ void createScenesAndViews()
    prop->SetMaxOrbs(6);
    prop->IncRefCount();
 
-
-
    viewContext = new REveViewContext();
    viewContext->SetBarrel(r, z);
    viewContext->SetTrackPropagator(prop);
@@ -570,6 +572,20 @@ void createScenesAndViews()
       column("phi", 3, "i.phi()").
       column("hadFraction", 3, "i.hadFraction()");
 
+    tableInfo->table("VsdHit").
+      column("x", 1, "i.x()").
+      column("y", 1, "i.y()").
+      column("z", 1, "i.z()");
+
+    tableInfo->table("VsdSegment").
+      column("pt",  1, "i.pt()").
+      column("eta", 3, "i.eta()").
+      column("phi", 3, "i.phi()").
+      column("x",   1, "i.posX()"). // using VsdCandidate's pos fields
+      column("y",   1, "i.posY()").
+      column("tx",  1, "i.tx()").
+      column("ty",  1, "i.ty()");
+
    viewContext->SetTableViewInfo(tableInfo);
 
 
@@ -603,7 +619,7 @@ void createScenesAndViews()
 
       mngRPhi->SetImportEmpty(true);
       auto rPhiView = eveMng->SpawnNewViewer("RPhi View");
-      rPhiView->SetCameraType(REveViewer::kCameraOrthoXOY);
+      //rPhiView->SetCameraType(REveViewer::kCameraOrthoXOY);
       rPhiView->AddScene(rPhiEventScene);
 
       auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry");
@@ -627,7 +643,7 @@ void createScenesAndViews()
 
        mngRhoZ->SetImportEmpty(true);
        auto rhoZView = eveMng->SpawnNewViewer("RhoZ View");
-       rhoZView->SetCameraType(REveViewer::kCameraOrthoXOY);
+       //rhoZView->SetCameraType(REveViewer::kCameraOrthoXOY);
        rhoZView->AddScene(rhoZEventScene);
 
        auto pgeoScene = eveMng->SpawnNewScene("Projection Geometry");

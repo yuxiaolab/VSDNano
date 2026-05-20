@@ -126,8 +126,8 @@ public:
 /////////////////////////////////////////////////
 class VsdMuon : public VsdCandidate
 {
-   bool m_global{false};
 public:
+   bool m_global{false};
    float global() const { return m_global; }
    void setGlobal(bool x) { m_global = x; }
 
@@ -153,6 +153,65 @@ public:
 
    using VsdBase::dump;
    void dump() { printf("VsdMET: phi: 2f, sumEt:%.2f / pt: %.2f\n", m_phi, m_sumEt); }
+};
+
+/////////////////////////////////////////////////
+class VsdHit : public VsdBase
+{
+public:
+   float m_x{0.f};
+   float m_y{0.f}; 
+   float m_z{0.f};
+
+public:
+   VsdHit() = default;
+   VsdHit& operator=(const VsdHit&) = default;
+   VsdHit(float ix, float iy, float iz) : 
+      m_x(ix), m_y(iy), m_z(iz) {}
+   virtual ~VsdHit(){}
+
+   float x() const { return m_x; }
+   float y() const { return m_y; }
+   float z() const { return m_z; }
+   
+   void setX(float x) { m_x = x; }
+   void setY(float y) { m_y = y; }
+   void setZ(float z) { m_z = z; }
+
+   using VsdBase::dump;
+   void dump() { printf("VsdHit x:%.2f, y:%.2f, z:%.2f\n", m_x, m_y, m_z); }
+};
+
+/////////////////////////////////////////////////
+
+class VsdSegment : public VsdCandidate
+{
+public:
+   // x, y, z are already in VsdCandidate as m_posX, m_posY, m_posZ
+   float m_tx{0.f};
+   float m_ty{0.f};
+
+public:
+   VsdSegment() = default;
+   VsdSegment& operator=(const VsdSegment&) = default;
+   
+   // Constructor uses VsdCandidate's momentum and position fields
+   VsdSegment(float pt, float eta, float phi, float ix, float iy, float iz, float itx, float ity) : 
+      VsdCandidate(pt, eta, phi), m_tx(itx), m_ty(ity) 
+   {
+      setPos(ix, iy, iz); 
+   }
+
+   float tx() const { return m_tx; }
+   float ty() const { return m_ty; }
+   void setTx(float tx) { m_tx = tx; }
+   void setTy(float ty) { m_ty = ty; }
+
+   using VsdCandidate::dump;
+   void dump() { 
+      printf("VsdSegment (Physics) pt:%.2f, pos(%.2f,%.2f,%.2f), slope(%.2f,%.2f)\n", 
+             m_pt, m_posX, m_posY, m_posZ, m_tx, m_ty); 
+   }
 };
 
 ////////////////////////////////////////////////
