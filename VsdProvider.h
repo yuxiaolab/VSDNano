@@ -1,3 +1,5 @@
+#ifndef VsdProvider_h
+#define VsdProvider_h
 #include "VsdBase.h"
 #include "TClass.h"
 #include "TVirtualCollectionProxy.h"
@@ -6,7 +8,7 @@
 #include "nlohmann/json.hpp"
 
 
-VsdProvider *g_provider = nullptr;
+inline VsdProvider *g_provider = nullptr;
 
 struct ColBranchInfo
 {
@@ -43,7 +45,11 @@ public:
     std::map<std::string, ColBranchInfo> cmap;
     TClass *vsdbase_class = TClass::GetClass<VsdBase>();
 
+    nlohmann::json *m_config{nullptr}; // used by NanoProvider (bootstrap.C)
+
     virtual ~VsdProvider() {}
+
+    VsdProvider() {} // default ctor for NanoProvider (no VSD TTree)
 
     // construcutor
     VsdProvider(std::string fn)
@@ -170,26 +176,32 @@ public:
         return nullptr;
     }
 
-    void GotoEvent(int eventIdx)
+    virtual void GotoEvent(int eventIdx)
     {
         m_eventIdx = eventIdx;
 
-        m_vsdTree->GetEntry(eventIdx);
-
-        for (auto &&[name, cbi] : cmap)
+        if (!cmap.empty())
         {
-            // printf("  Trying to read %s\n", name.c_str());
-            // printf("    pre get branch entry size = %u\n", cbi.m_proxy->Size());
-            cbi.m_branch->GetEntry(eventIdx);
-            // printf("    size = %u\n", cbi.m_proxy->Size());
-
-            VsdCollection *vc = RefColl(name);
-            vc->m_list.clear();
-            int ss = cbi.m_proxy->Size();
-            for (int i = 0; i < ss; ++i)
+            // VSD TTree path: branches are vector<VsdXxx> read via cmap
+            m_vsdTree->GetEntry(eventIdx);
+            for (auto &&[name, cbi] : cmap)
             {
-                // cbi.vsd_base_at(i)->dump();
-                vc->m_list.push_back(cbi.vsd_base_at(i));
+                cbi.m_branch->GetEntry(eventIdx);
+                VsdCollection *vc = RefColl(name);
+                vc->m_list.clear();
+                int ss = cbi.m_proxy->Size();
+                for (int i = 0; i < ss; ++i)
+                    vc->m_list.push_back(cbi.vsd_base_at(i));
+            }
+        }
+        else
+        {
+            // NanoAOD path: caller already called GetEntry; each collection
+            // has a fill() that reads directly from VSDReader members.
+            for (auto coll : m_collections)
+            {
+                coll->m_list.clear();
+                coll->fill();
             }
         }
         set_event_info();
@@ -197,3 +209,5 @@ public:
 
     virtual Long64_t GetNumEvents() { return m_vsdTree->GetEntriesFast(); }
 };
+
+#endif // VsdProvider_h
