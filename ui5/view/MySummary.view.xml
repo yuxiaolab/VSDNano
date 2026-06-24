@@ -13,15 +13,15 @@
           class="sapUiSizeCompact sapUiTinyMargin">
 	       <headerToolbar>
 				<OverflowToolbar >
-					<Button  id="addCollection"  type="Emphasized" enabled="false"
-            press="addCollection"
+					<ToggleButton  id="eveMode"
+            press="switchMode"
             width="100%"
-						text="Add Collections"
+						text="Show Scene List"
 						tooltip="Enable / Disable Custom Context Menu">
             <layoutData>
 				      <OverflowToolbarLayoutData priority="High" shrinkable="false" />
 			      </layoutData>
-          </Button>
+          </ToggleButton>
 				</OverflowToolbar>
         </headerToolbar>
     </Tree>
