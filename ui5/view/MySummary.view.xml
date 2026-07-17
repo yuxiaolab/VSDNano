@@ -16,7 +16,7 @@
 					<ToggleButton  id="eveMode"
             press="switchMode"
             width="100%"
-						text="Show Scene List"
+						text="Shov Scene List"
 						tooltip="Enable / Disable Custom Context Menu">
             <layoutData>
 				      <OverflowToolbarLayoutData priority="High" shrinkable="false" />
